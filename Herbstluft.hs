@@ -33,6 +33,8 @@ setupTags = do
         -- Construct the keybind command
         let switchCmd = "herbstclient keybind " ++ modKey  ++ "-" ++ tag ++ " use_index " ++ tag
         let moveCmd = "herbstclient keybind " ++ modKey  ++ "-Shift-" ++ tag ++ " move_index " ++ tag
+        putStrLn moveCmd
+        putStrLn switchCmd
         -- Execute the keybind command
         callCommand switchCmd
         callCommand moveCmd
@@ -134,29 +136,29 @@ mouseKeysModified :: [(String, String)]
 mouseKeysModified = map (\(key, action) -> (replaceBWithButton key, action)) mouseKeys
 
 attrs :: [(String, String)]
-attrs = [ ("theme.tiling.reset", "1")
-        , ("theme.floating.reset", "1")
-        , ("theme.title_height", "15")
-        , ("theme.title_when", "never")
+attrs = [  ("theme.title_height", "15")
+        , ("theme.title_when", "'always'")
         , ("theme.title_font", "'Dejavu Sans:pixelsize=12'")
         , ("theme.title_depth", "3")
-        , ("theme.active.color", "#345F0Cef")
-        , ("theme.title_color", "#ffffff")
-        , ("theme.normal.color", "#323232dd")
-        , ("theme.urgent.color", "#7811A1dd")
-        , ("theme.tab_color", "#1F1F1Fdd")
-        , ("theme.active.tab_color", "#2B4F0Add")
-        , ("theme.active.tab_outer_color", "#6C8257dd")
-        , ("theme.active.tab_title_color", "#ababab")
-        , ("theme.normal.title_color", "#898989")
+        , ("theme.active.color", "'#345F0Cef'")
+        , ("theme.title_color", "'#ffffff'")
+        , ("theme.normal.color", "'#323232dd'")
+        , ("theme.urgent.color", "'#7811A1dd'")
+        , ("theme.tab_color", "'#1F1F1Fdd'")
+        , ("theme.active.tab_color", "'#2B4F0Add'")
+        , ("theme.active.tab_outer_color", "'#6C8257dd'")
+        , ("theme.active.tab_title_color", "'#ababab'")
+        , ("theme.normal.title_color", "'#898989'")
         , ("theme.inner_width", "1")
-        , ("theme.inner_color", "black")
+        , ("theme.inner_color", "'black'")
         , ("theme.border_width", "3")
         , ("theme.floating.border_width", "4")
         , ("theme.floating.outer_width", "1")
-        , ("theme.floating.outer_color", "black")
-        , ("theme.active.inner_color", "#789161")
-        , ("theme.urgent.inner_color", "#9A65B0")  ]
+        , ("theme.floating.outer_color", "'black'")
+        , ("theme.active.inner_color", "'#789161'")
+        , ("theme.urgent.inner_color", "'#9A65B0'")
+        , ("theme.normal.inner_color", "'#606060'")
+ ]
   
 setStateColors :: String -> IO ()
 setStateColors state = do
@@ -165,16 +167,51 @@ setStateColors state = do
     callCommand cmd
 
 settings :: [(String, String)]
-settings = [ ("frame_border_active_color", "#222222cc")
-        , ("frame_border_normal_color", "#101010cc")
-        , ("frame_bg_normal_color", "#565656aa")
-        , ("frame_bg_active_color", "#345F0Caa")
-        , ("frame_border_width", "1")
-        , ("show_frame_decorations", "'focused_if_multiple'")
-        , ("frame_bg_transparent", "on")
-        , ("frame_transparent_width", "5")
-        , ("frame_gap", "4")
+settings = [ ("frame_border_active_color", "'#222222cc'")
+           , ("frame_border_normal_color", "'#101010cc'")
+           , ("frame_bg_normal_color", "'#565656aa'")
+           , ("frame_bg_active_color", "'#345F0Caa'")
+           , ("frame_border_width", "1")
+           , ("show_frame_decorations", "'focused_if_multiple'")
+           , ("frame_bg_transparent", "on")
+           , ("frame_transparent_width", "5")
+           , ("frame_gap", "4")
+
            ]
+-- Boolean rules are represented as (String, Bool) tuples
+type BooleanRule = (String, Bool)
+booleanRules :: [BooleanRule]
+booleanRules = [("focus", True)]
+-- Boolean rules are represented as (String, Bool) tuples
+
+-- Complex rules are represented as (String, String) tuples
+type ComplexRule = (String, String)
+complexRules :: [ComplexRule]
+complexRules = [
+    ("windowtype~'_NET_WM_WINDOW_TYPE_(DIALOG|UTILITY|SPLASH)'", "floating=on")
+ ,    ("windowtype='_NET_WM_WINDOW_TYPE_DIALOG'", "focus=on")
+ ,   ("windowtype~'_NET_WM_WINDOW_TYPE_(NOTIFICATION|DOCK|DESKTOP)'", "manage=off")
+ ,   ("fixedsize", "floating=on") -- Assuming "fixedsize" is a condition that matches certain windows
+ ]           
+--window rules
+generateBooleanCommand :: (String, Bool) -> String
+generateBooleanCommand (rule, state) = 
+    let stateStr = if state then "on" else "off"
+    in "herbstclient rule " ++ rule ++ "=" ++ stateStr
+generateComplexCommand :: (String, String) -> String
+generateComplexCommand (condition, state) = 
+    "herbstclient rule " ++ condition ++ " " ++ state
+
+
+applyRule :: String -> IO ()
+applyRule command = do
+    putStrLn $ "Applying rule: " ++ command
+    callCommand command
+applyBooleanRules :: [BooleanRule] -> IO ()
+applyBooleanRules rules = mapM_ (\rule -> applyRule $ generateBooleanCommand rule) rules
+applyComplexRules :: [ComplexRule] -> IO ()
+applyComplexRules rules = mapM_ (\rule -> applyRule $ generateComplexCommand rule) rules
+
 -- Implement the main logic
 main :: IO ()
 main = do
@@ -185,5 +222,8 @@ main = do
     mapM_ (\(key, action) -> mouseBind key action) mouseKeysModified
     mapM_ applySetting settings        
     mapM_ (setStateColors) states
+    
+    applyBooleanRules booleanRules
+    applyComplexRules complexRules
     _ <- system "herbstclient detect_monitors"
     return ()
