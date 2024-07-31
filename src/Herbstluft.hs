@@ -27,21 +27,20 @@ createCommand baseCommand input action = baseCommand ++ " " ++ input ++ " " ++ a
 -- Function to set up tags using herbstclient
 setupTags :: IO ()
 setupTags = do
-    -- Loop through each tag
-    mapM_ (\tag -> do
-        -- Construct the add command
-        let addCmd = "herbstclient add " ++ tag
-        -- Execute the add command
-        callCommand addCmd
-        -- Construct the keybind command
-        let switchCmd = "herbstclient keybind " ++ modKey  ++ "-" ++ tag ++ " use_index " ++ tag
-        let moveCmd = "herbstclient keybind " ++ modKey  ++ "-Shift-" ++ tag ++ " move_index " ++ tag
-        putStrLn moveCmd
-        putStrLn switchCmd
-        -- Execute the keybind command
-        callCommand switchCmd
-        callCommand moveCmd
-          ) tags
+  let firstTag = head tags
+  let renameCmd = "herbstclient rename default " ++ firstTag
+  callCommand renameCmd
+  mapM_(\(i, tag) -> do
+           let addCmd = "herbstclient add " ++ tag
+           callCommand addCmd
+           let adjustedIndex = i + 1
+           let switchCmd = "herbstclient keybind " ++ modKey ++ "-" ++ show adjustedIndex ++ " use_index " ++ show i
+           let moveCmd = "herbstclient keybind " ++ modKey ++ "-Shift-" ++ show adjustedIndex ++ " move_index " ++ show i
+           putStrLn moveCmd
+           putStrLn switchCmd
+           callCommand switchCmd
+           callCommand moveCmd
+       ) (zip [0..] tags)
 
 -- Define the bindKeys functionp
 bindKeys :: String -> String -> IO ()
