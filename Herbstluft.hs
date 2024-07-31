@@ -1,3 +1,6 @@
+#! /usr/bin/env nix-shell
+#! nix-shell -p "haskellPackages.ghcWithPackages (p: with p; [herbstluftwm])" -i "nix-shell -p pkgs.herbstluftwm &&  runghc"
+
 import System.Process (callCommand, system)
 import Data.List (intercalate)
 import Control.Monad
